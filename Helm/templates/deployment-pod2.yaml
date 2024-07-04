@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: django-unchained-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: django-unchained
+  template:
+    metadata:
+      labels:
+        app: django-unchained
+    spec:
+      containers:
+      - name: django-unchained
+        image: crowmein/django-unchained:latest
+        priorityClassName: lower-priority
+        ports:
+        - containerPort: 3003
+        volumeMounts:
+        - name: nfs-volume
+          mountPath: /app
+        env:
+        - name: DB_HOST
+          value: postgres-service
+        - name: DB_NAME
+          value: tutorial-dev
+        - name: DB_USER
+          value: vinhle
+        - name: DB_PASS
+          value: password
+        command: ["sh", "-c", "python manage.py migrate && python manage.py runserver 0.0.0.0:3003"]
+      volumes:
+      - name: nfs-volume
+        nfs:
+          server: 51.250.69.234
+          path: "/var/lib/jenkins/workspace/django/DevOps/Helm"
+

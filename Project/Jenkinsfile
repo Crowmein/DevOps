@@ -1,0 +1,87 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_IMAGE = 'django-proj'
+        CONTAINER_NAME = 'django-skill'
+        HOST_PORT = 3003
+        INDEX_MD5 = ''
+        REPO_URL = 'https://github.com/Crowmein/DevOps.git'
+        BRANCH_TO_WATCH = 'master'
+    }
+
+    triggers {
+        pollSCM('* * * * *')
+    }
+
+    stages {
+        stage('Скачивание репозитория') {
+            steps {
+                sh "rm -rf DevOps || true"
+                sh "git clone -b \${BRANCH_TO_WATCH} \${REPO_URL}"
+            }
+        }
+        stage('Удаление старого образа') {
+            steps {
+                script {
+                    sh 'docker rmi -f $DOCKER_IMAGE || true'
+                }
+            }
+        }
+
+        stage('Сборка образа') {
+            steps {
+                script {
+                    dir('/var/lib/jenkins/workspace/django/DevOps/Projeckt') {
+                        sh 'docker build -t $DOCKER_IMAGE .'
+                    }
+                }
+            }
+        }
+        
+        stage('Запуск контейнера') {
+            steps {
+                script {
+                    sh "docker run -d --name \${CONTAINER_NAME} -p \${HOST_PORT}:3003 \${DOCKER_IMAGE}"
+                }
+            }
+        }
+
+        stage('Тегирование и пуш образа') {
+            steps {
+                script {
+                    DOCKER_IMAGE_ID = sh(script: "docker images --format {{.ID}} $DOCKER_IMAGE", returnStdout: true).trim()
+                    sh "docker tag $DOCKER_IMAGE_ID crowmein/django-unchained:latest"
+                    sh "echo ${env.DOCKER_PASSWORD} | docker login --username ${env.DOCKER_USERNAME} --password-stdin"
+                    sh "docker push crowmein/django-unchained:latest"
+                }
+            }
+        }
+
+        stage('Проверка и установка Helm chart') {
+            steps {
+                script {
+                    def helmPath = "/var/lib/jenkins/workspace/django/DevOps/Helm"
+                    def chartPath = "django-1.0.0.tgz"
+                    if (!fileExists(chartPath)) {
+                        sh "cd \${helmPath} && helm package ."
+                        sh "cd \${helmPath} && helm install django ${chartPath}"
+                } else {
+                        sh "helm upgrade django ${chartPath} --set image.tag=latest"
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            sh "docker rm -f \${CONTAINER_NAME}"
+        }
+        failure {
+            mail to: 'maks.fazl@mail.ru',
+                 subject: "Ошибка CI",
+                 body: "В процессе CI была обнаружена ошибка. Пожалуйста, проверьте Jenkins Pipeline."
+        }
+    }
+}

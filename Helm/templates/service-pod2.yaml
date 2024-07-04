@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: django-unchained-service
+spec:
+  selector:
+    app: django-unchained
+  ports:
+  - protocol: TCP
+    port: 3003
+    targetPort: 3003
+
