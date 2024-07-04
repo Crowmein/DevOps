@@ -8,6 +8,7 @@
 1.2 Создаем авторизационный ключ для данного акка и кладем его в папку к main.tf в файл authorized_key.json
 1.3 Файл main.tf, правишь cloud_id, а так же folder_id
 1.4 Файл srv.tf, 52 стройка service_account_id, ставишь свой id сервисного
+1.5 Файл srv.tf, 86 строка, меняешь расположение скрипта full.sh под себя
 1.5 Файл k8s, 98 и 99 строка, тоже свой id
 1.6 Файл cloud_config.yaml, генерируй ключ ssh-keygen -t ed25519 -0, вставляешь в ssh-authorized-keys
 1.7 Контрольный выстрел через команды terraform init, terraform apply
